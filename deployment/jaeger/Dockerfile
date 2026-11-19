@@ -7,4 +7,4 @@ EXPOSE 10000
 EXPOSE 4317
 EXPOSE 4318
 
-CMD ["--query.http-port=10000"]
+CMD ["--query.http-server.host-port=:10000"]
