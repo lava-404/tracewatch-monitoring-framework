@@ -236,56 +236,45 @@ export default function LiveExecution() {
     setTraceId('')
     setExecutionResult(null)
     setSelectedStage(null)
+  
     try {
-      const payload = { scenario: scenario.id === 'failure' ? 'failure-execution' : 'complete-payment-flow', ...scenario.failurePayload }
+      const payload = {
+        scenario: scenario.id === 'failure'
+          ? 'failure-execution'
+          : 'complete-payment-flow',
+        ...scenario.failurePayload,
+      }
+  
       const response = await api.post('/api/simulate/order-flow', payload)
       const result = response.data
-      if (!response.ok && !result.trace_id) throw new Error(result.detail || result.results?.order?.error || `Execution failed (${response.status})`)
+  
+      if (!result) {
+        throw new Error('No response received from API Gateway')
+      }
+  
       const id = result.trace_id
-      if (!id) throw new Error('The execution response did not contain a trace_id. Check the Gateway trace-id response change.')
+  
       setExecutionResult(result)
-      setTraceId(id)
+      setTraceId(id || '')
       setRunTime(new Date())
-      // Jaeger may take a short time to index a trace after the execution ends.
-      // Retry lookup instead of failing on the first 404.
-      // Jaeger may take time to index a trace after execution.
-      const MAX_WAIT = 30_000
-      const POLL_INTERVAL = 1_500
-      const startTime = Date.now()
-
-      let foundTrace = null
-      let lastStatus = null
-
-      setWaitingForTrace(true)
-
-      while (Date.now() - startTime < MAX_WAIT) {
+  
+      // Execution succeeds independently of Jaeger availability.
+      if (id) {
         try {
-          const traceResponse = await api.get(`/api/observability/traces/${id}`)
-          lastStatus = traceResponse.status
-
+          const traceResponse = await api.get(
+            `/api/observability/traces/${id}`
+          )
+  
           const traceData = traceResponse.data
-          foundTrace = traceData?.data?.[0] || null
-
+          const foundTrace = traceData?.data?.[0] || null
+  
           if (foundTrace?.spans?.length) {
-            break
+            setTrace(foundTrace)
           }
-        } catch (pollError) {
-          // Temporary network errors shouldn't immediately fail execution.
-          console.warn('Trace polling attempt failed:', pollError)
+        } catch (traceError) {
+          console.warn('Trace unavailable:', traceError)
         }
-
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
       }
-
-      setWaitingForTrace(false)
-
-      if (!foundTrace?.spans?.length) {
-        throw new Error(
-          `Execution succeeded, but trace ${id} was unavailable after 30 seconds. It may have been discarded by sampling. (Last HTTP status: ${lastStatus ?? 'no response'})`
-        )
-      }
-
-      setTrace(foundTrace)
     } catch (err) {
       setError(err.message || 'Execution failed')
     } finally {
