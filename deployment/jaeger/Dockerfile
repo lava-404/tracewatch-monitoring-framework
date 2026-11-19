@@ -3,6 +3,8 @@ FROM jaegertracing/all-in-one:1.57
 ENV COLLECTOR_OTLP_ENABLED=true
 ENV SPAN_STORAGE_TYPE=memory
 
-EXPOSE 16686
+EXPOSE 10000
 EXPOSE 4317
 EXPOSE 4318
+
+CMD ["--query.http-port=10000"]
