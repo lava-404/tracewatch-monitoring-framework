@@ -226,10 +226,8 @@ export default function LiveExecution() {
   const ScenarioIcon = scenario.icon
   const stageData = useMemo(() => stages.map((stage) => getStageData(trace, stage)), [trace])
   const totalDuration = trace?.spans?.reduce((max, span) => Math.max(max, Number(span.duration || 0)), 0) || 0
-  const traceUrl = traceId
-  ? `http://localhost:16686/trace/${traceId}`
-  : ''
-
+  const jaegerUrl = import.meta.env.VITE_JAEGER_URL || "http://localhost:16686";
+  const traceUrl = `${jaegerUrl}/trace/${traceId}`;
   async function runScenario() {
     setLoading(true)
     setError('')
