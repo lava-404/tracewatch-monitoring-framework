@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+opentelemetry-proto
+protobuf
+asyncpg
