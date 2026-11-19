@@ -2,11 +2,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 
-const API_BASE = ''
+const API_BASE = import.meta.env.VITE_API_GATEWAY_URL || ''
 
-const JAEGER_API_URL = '/jaeger-api'
+const JAEGER_API_URL = import.meta.env.VITE_JAEGER_URL || '/jaeger-api'
 
-const PROMETHEUS_URL = '/prometheus-api'
+const PROMETHEUS_URL = import.meta.env.VITE_PROMETHEUS_URL || '/prometheus-api'
 
 export const api = axios.create({
   baseURL: API_BASE,
