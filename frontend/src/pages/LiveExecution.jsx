@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import PageHeader from '../components/PageHeader'
+import { api } from '../hooks/useApi'
 import {
   Activity, ArrowRight, CheckCircle2, CreditCard, AlertTriangle,
   Workflow, ShieldCheck, X, Clock, Layers, Server, Zap,
@@ -237,8 +238,8 @@ export default function LiveExecution() {
     setSelectedStage(null)
     try {
       const payload = { scenario: scenario.id === 'failure' ? 'failure-execution' : 'complete-payment-flow', ...scenario.failurePayload }
-      const response = await fetch('/api/simulate/order-flow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const result = await response.json()
+      const response = await api.post('/api/simulate/order-flow', payload)
+      const result = response.data
       if (!response.ok && !result.trace_id) throw new Error(result.detail || result.results?.order?.error || `Execution failed (${response.status})`)
       const id = result.trace_id
       if (!id) throw new Error('The execution response did not contain a trace_id. Check the Gateway trace-id response change.')
@@ -259,16 +260,14 @@ export default function LiveExecution() {
 
       while (Date.now() - startTime < MAX_WAIT) {
         try {
-          const traceResponse = await fetch(`/api/observability/traces/${id}`)
+          const traceResponse = await api.get(`/api/observability/traces/${id}`)
           lastStatus = traceResponse.status
 
-          if (traceResponse.ok) {
-            const traceData = await traceResponse.json()
-            foundTrace = traceData?.data?.[0] || null
+          const traceData = traceResponse.data
+          foundTrace = traceData?.data?.[0] || null
 
-            if (foundTrace?.spans?.length) {
-              break
-            }
+          if (foundTrace?.spans?.length) {
+            break
           }
         } catch (pollError) {
           // Temporary network errors shouldn't immediately fail execution.
